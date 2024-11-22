@@ -116,8 +116,24 @@ for ip in "${dns64_addresses[@]}"; do
     echo "--------------------------------------"
 done
 
-# 排序并按性能从高到低输出DNS64地址
-echo "根据性能排序DNS64地址（从好到坏）："
-for ip in "${!dns_scores[@]}"; do
-    echo "$ip: ${dns_scores[$ip]}"
-done | sort -t ":" -k2,2nr
+# 排序并按评分从高到低输出DNS64地址
+echo "根据评分排序DNS64地址（从高到坏）："
+sorted_ips=$(for ip in "${!dns_scores[@]}"; do
+    # 获取 IPv6 地址和评分
+    echo "$ip 评分:${dns_scores[$ip]}"
+done | sort -k2 -t ':')
+echo "$sorted_ips"
+echo "--------------------------------------"
+# 显示排名前两名的IP
+top_two=$(echo "$sorted_ips" | head -n 2)
+# 备份原始 /etc/resolv.conf
+cp /etc/resolv.conf /etc/resolv.conf.bak
+echo "DNS64更新内容：" 
+{
+echo "$top_two" | while read -r line; do
+    ip=$(echo "$line" | awk '{print $1}')  # 提取每行的第一个字段（即IPv6地址）
+    echo "nameserver $ip"  # 更新 /etc/resolv.conf
+done
+} > /etc/resolv.conf
+echo "/etc/resolv.conf 文件内容"
+cat /etc/resolv.conf
